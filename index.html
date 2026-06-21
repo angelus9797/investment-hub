@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module Hub</title>
+<style>
+  :root{
+    --bg:#0B0E11;
+    --panel:#12161C;
+    --panel-edge:#1D232C;
+    --line:#222933;
+    --text:#E8EAED;
+    --muted:#7C8694;
+    --amber:#FF9F1C;
+    --green:#00D9A0;
+    --red:#FF5C5C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    min-height:100vh;
+    padding:40px 24px 80px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+
+  .prompt{
+    font-family:'JetBrains Mono','SF Mono',Consolas,monospace;
+    font-size:13px;
+    color:var(--green);
+    margin-bottom:6px;
+    letter-spacing:0.02em;
+  }
+  .prompt .cursor{
+    display:inline-block;
+    width:7px;height:13px;
+    background:var(--green);
+    margin-left:4px;
+    vertical-align:-1px;
+    animation:blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink{50%{opacity:0;}}
+
+  h1{
+    font-family:'JetBrains Mono','SF Mono',Consolas,monospace;
+    font-size:28px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    margin:0 0 4px;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:14px;
+    margin:0 0 36px;
+  }
+
+  .col-headers{
+    display:grid;
+    grid-template-columns:64px 1fr 110px 150px;
+    padding:0 18px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    border-bottom:1px solid var(--line);
+  }
+  @media (max-width:680px){
+    .col-headers{display:none;}
+  }
+
+  .ticket{
+    display:grid;
+    grid-template-columns:64px 1fr 110px 150px;
+    align-items:center;
+    gap:8px;
+    padding:18px;
+    border-bottom:1px solid var(--line);
+    transition:background 0.15s ease;
+  }
+  .ticket:hover{background:var(--panel);}
+
+  @media (max-width:680px){
+    .ticket{
+      grid-template-columns:1fr;
+      gap:10px;
+      background:var(--panel);
+      border:1px solid var(--panel-edge);
+      border-radius:10px;
+      margin-bottom:12px;
+    }
+  }
+
+  .code{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:0.03em;
+  }
+
+  .info .name{
+    font-size:15.5px;
+    font-weight:600;
+    margin-bottom:3px;
+  }
+  .info .desc{
+    font-size:12.5px;
+    color:var(--muted);
+    line-height:1.4;
+  }
+  .info .url-preview{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--panel-edge);
+    margin-top:4px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    max-width:280px;
+  }
+
+  .status{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+  }
+  .dot{
+    width:7px;height:7px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+  .dot.live{background:var(--green);box-shadow:0 0 0 0 rgba(0,217,160,0.6);animation:pulse 2s infinite;}
+  .dot.pending{background:var(--amber);}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(0,217,160,0.45);}
+    70%{box-shadow:0 0 0 6px rgba(0,217,160,0);}
+    100%{box-shadow:0 0 0 0 rgba(0,217,160,0);}
+  }
+  .status.live-text{color:var(--green);}
+  .status.pending-text{color:var(--amber);}
+
+  .action{display:flex;gap:6px;justify-content:flex-end;}
+  .btn{
+    display:inline-block;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:600;
+    padding:7px 14px;
+    border-radius:6px;
+    text-decoration:none;
+    border:1px solid var(--line);
+    color:var(--text);
+    background:transparent;
+    cursor:pointer;
+    transition:all 0.15s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--amber);color:var(--amber);}
+  .btn.disabled{
+    color:var(--muted);
+    border-color:var(--line);
+    cursor:not-allowed;
+    opacity:0.6;
+  }
+  .btn.disabled:hover{border-color:var(--line);color:var(--muted);}
+  .btn.danger:hover{border-color:var(--red);color:var(--red);}
+  .btn.ghost{border-color:transparent;color:var(--muted);padding:7px 8px;}
+  .btn.ghost:hover{color:var(--amber);border-color:transparent;}
+
+  .edit-row{
+    grid-column:1 / -1;
+    margin-top:10px;
+    display:none;
+    gap:8px;
+    flex-direction:column;
+  }
+  .edit-row.open{display:flex;}
+  .edit-row input{
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    padding:9px 11px;
+    border-radius:6px;
+    outline:none;
+    width:100%;
+  }
+  .edit-row input:focus{border-color:var(--amber);}
+  .edit-row-actions{display:flex;gap:8px;}
+  .save-btn{border-color:var(--green);color:var(--green);font-family:'Inter',sans-serif;}
+  .save-btn:hover{background:var(--green);color:#06140F;}
+
+  .add-row{
+    margin-top:18px;
+    border:1px dashed var(--panel-edge);
+    border-radius:10px;
+    padding:16px 18px;
+  }
+  .add-row.collapsed{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    gap:8px;
+    transition:border-color 0.15s, color 0.15s;
+  }
+  .add-row.collapsed:hover{border-color:var(--amber);color:var(--amber);}
+
+  .add-form{display:none;flex-direction:column;gap:10px;}
+  .add-form.open{display:flex;}
+  .add-form input{
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    padding:9px 11px;
+    border-radius:6px;
+    outline:none;
+  }
+  .add-form input:focus{border-color:var(--amber);}
+  .add-form-row{display:flex;gap:8px;}
+  .add-form-row .btn{font-family:'Inter',sans-serif;font-weight:500;}
+
+  footer{
+    text-align:center;
+    margin-top:50px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--panel-edge);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="prompt">phil@modules:~$ ls -la ./dashboards<span class="cursor"></span></div>
+  <h1>Module Hub</h1>
+  <p class="sub">Quick launch for your personal tools. Click "edit" on any row to set or change its link.</p>
+  <p class="sub" style="margin-top:-28px; font-size:11.5px; font-family:'JetBrains Mono',monospace;" id="syncStatus">connecting…</p>
+
+  <div class="col-headers">
+    <span>ID</span><span>Module</span><span>Status</span><span style="text-align:right;">Action</span>
+  </div>
+
+  <div id="builtin"></div>
+  <div id="custom"></div>
+
+  <div class="add-row collapsed" id="addCollapsed">+ add module</div>
+  <div class="add-row" id="addExpanded" style="display:none;">
+    <div class="add-form open" id="addForm">
+      <input type="text" id="newName" placeholder="Module name (e.g. Risk Calculator)">
+      <input type="text" id="newDesc" placeholder="Short description (e.g. position sizing & R:R tool)">
+      <input type="text" id="newUrl" placeholder="Artifact URL (leave blank if still building)">
+      <div class="add-form-row">
+        <button class="btn save-btn" id="saveBtn">save module</button>
+        <button class="btn" id="cancelBtn">cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>// synced across devices via Firestore — links open in a new tab</footer>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCXkM-k_uMz_f-4s_PCiA_E2mIHFJbM7qI",
+  authDomain: "investment-hub-de53b.firebaseapp.com",
+  projectId: "investment-hub-de53b",
+  storageBucket: "investment-hub-de53b.firebasestorage.app",
+  messagingSenderId: "619648622122",
+  appId: "1:619648622122:web:445db90cf5593d8fae6d53"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const hubDocRef = doc(db, 'hub', 'modules');
+
+function setSyncStatus(text, ok){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.style.color = ok ? 'var(--green)' : 'var(--amber)';
+}
+
+const defaultBuiltins = [
+  {
+    code: 'DASH-01',
+    name: 'Investment Dashboard',
+    desc: 'Portfolio tracking & investment overview',
+    url: 'https://claude.ai/public/artifacts/999edcf3-8e30-48e3-be92-5c47e8cf4353'
+  },
+  {
+    code: 'DASH-02',
+    name: 'Futures Trading',
+    desc: 'NQ futures trade log, P&L, equity curve & charts',
+    url: 'https://claude.ai/public/artifacts/46fa2c11-08b4-4ee7-8ab7-f87bf02dfec9'
+  }
+];
+
+let builtinModules = [];
+let customModules = [];
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+function escapeAttr(str){
+  return escapeHtml(str).replace(/"/g,'&quot;');
+}
+
+function renderTicket(m, kind, idx){
+  // kind: 'builtin' or 'custom'
+  const status = m.url ? 'live' : 'pending';
+  const statusDot = status === 'live' ? 'live' : 'pending';
+  const statusText = status === 'live' ? 'LIVE' : 'BUILDING';
+  const statusClass = status === 'live' ? 'live-text' : 'pending-text';
+
+  const actionHtml = m.url
+    ? `<a class="btn" href="${escapeAttr(m.url)}" target="_blank" rel="noopener noreferrer">open →</a>`
+    : `<span class="btn disabled">no link yet</span>`;
+
+  const removeBtn = kind === 'custom'
+    ? `<button class="btn danger ghost" data-remove="${idx}" title="remove">✕</button>`
+    : '';
+
+  const editId = `${kind}-${idx}`;
+
+  return `
+    <div class="ticket" data-editid="${editId}">
+      <div class="code">${m.code}</div>
+      <div class="info">
+        <div class="name">${escapeHtml(m.name)}</div>
+        <div class="desc">${escapeHtml(m.desc)}</div>
+        ${m.url ? `<div class="url-preview">${escapeHtml(m.url)}</div>` : ''}
+      </div>
+      <div class="status ${statusClass}"><span class="dot ${statusDot}"></span>${statusText}</div>
+      <div class="action">
+        ${actionHtml}
+        <button class="btn ghost" data-edit="${editId}">edit</button>
+        ${removeBtn}
+      </div>
+      <div class="edit-row" id="edit-${editId}">
+        <input type="text" id="editurl-${editId}" placeholder="Paste artifact URL" value="${escapeAttr(m.url || '')}">
+        <div class="edit-row-actions">
+          <button class="btn save-btn" data-save="${editId}">save link</button>
+          <button class="btn" data-close="${editId}">cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAll(){
+  document.getElementById('builtin').innerHTML =
+    builtinModules.map((m, idx) => renderTicket(m, 'builtin', idx)).join('');
+  document.getElementById('custom').innerHTML =
+    customModules.map((m, idx) => renderTicket(Object.assign({code: 'DASH-' + String(idx + builtinModules.length + 1).padStart(2,'0')}, m), 'custom', idx)).join('');
+  wireUpHandlers();
+}
+
+function wireUpHandlers(){
+  document.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-edit');
+      document.getElementById('edit-' + id).classList.toggle('open');
+    });
+  });
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-close');
+      document.getElementById('edit-' + id).classList.remove('open');
+    });
+  });
+  document.querySelectorAll('[data-save]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-save');
+      const [kind, idxStr] = id.split('-');
+      const idx = parseInt(idxStr, 10);
+      const newUrl = document.getElementById('editurl-' + id).value.trim();
+      if(kind === 'builtin'){
+        builtinModules[idx].url = newUrl;
+        await saveBuiltinOverrides();
+      } else {
+        customModules[idx].url = newUrl;
+        await saveCustom();
+      }
+      renderAll();
+    });
+  });
+  document.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.getAttribute('data-remove'), 10);
+      customModules.splice(idx, 1);
+      await saveCustom();
+      renderAll();
+    });
+  });
+}
+
+let remoteData = { builtinOverrides: {}, customModules: [] };
+
+async function loadRemoteData(){
+  try{
+    const snap = await getDoc(hubDocRef);
+    if(snap.exists()){
+      const data = snap.data();
+      remoteData = {
+        builtinOverrides: data.builtinOverrides || {},
+        customModules: data.customModules || []
+      };
+    } else {
+      // First time ever opening this hub — seed the document
+      remoteData = { builtinOverrides: {}, customModules: [] };
+      await setDoc(hubDocRef, remoteData);
+    }
+    setSyncStatus('synced via Firestore', true);
+  } catch(e){
+    console.error('Firestore read failed, falling back to localStorage', e);
+    try{
+      const rawOverrides = localStorage.getItem('hub-builtin-overrides');
+      const rawCustom = localStorage.getItem('hub-custom-modules');
+      remoteData = {
+        builtinOverrides: rawOverrides ? JSON.parse(rawOverrides) : {},
+        customModules: rawCustom ? JSON.parse(rawCustom) : []
+      };
+    } catch(e2){
+      remoteData = { builtinOverrides: {}, customModules: [] };
+    }
+    setSyncStatus('offline — using local copy', false);
+  }
+}
+
+async function persistRemoteData(){
+  try{
+    await setDoc(hubDocRef, remoteData);
+    setSyncStatus('synced via Firestore', true);
+  } catch(e){
+    console.error('Firestore write failed, saving locally instead', e);
+    setSyncStatus('offline — saved locally only', false);
+  }
+  // Always keep a local mirror too, so the page still works if Firestore is briefly unreachable
+  try{
+    localStorage.setItem('hub-builtin-overrides', JSON.stringify(remoteData.builtinOverrides));
+    localStorage.setItem('hub-custom-modules', JSON.stringify(remoteData.customModules));
+  } catch(e){ /* ignore */ }
+}
+
+async function loadBuiltins(){
+  const overrides = remoteData.builtinOverrides || {};
+  builtinModules = defaultBuiltins.map(m => {
+    if(overrides[m.code] && typeof overrides[m.code].url === 'string'){
+      return Object.assign({}, m, { url: overrides[m.code].url });
+    }
+    return Object.assign({}, m);
+  });
+}
+
+async function saveBuiltinOverrides(){
+  const overrides = {};
+  builtinModules.forEach(m => { overrides[m.code] = { url: m.url }; });
+  remoteData.builtinOverrides = overrides;
+  await persistRemoteData();
+}
+
+async function loadCustom(){
+  customModules = remoteData.customModules || [];
+}
+
+async function saveCustom(){
+  remoteData.customModules = customModules;
+  await persistRemoteData();
+}
+
+document.getElementById('addCollapsed').addEventListener('click', () => {
+  document.getElementById('addCollapsed').style.display = 'none';
+  document.getElementById('addExpanded').style.display = 'block';
+});
+document.getElementById('cancelBtn').addEventListener('click', () => {
+  document.getElementById('addExpanded').style.display = 'none';
+  document.getElementById('addCollapsed').style.display = 'flex';
+  document.getElementById('newName').value = '';
+  document.getElementById('newDesc').value = '';
+  document.getElementById('newUrl').value = '';
+});
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('newName').value.trim();
+  const desc = document.getElementById('newDesc').value.trim();
+  const url = document.getElementById('newUrl').value.trim();
+  if(!name) return;
+  customModules.push({ name, desc, url });
+  await saveCustom();
+  renderAll();
+  document.getElementById('newName').value = '';
+  document.getElementById('newDesc').value = '';
+  document.getElementById('newUrl').value = '';
+  document.getElementById('addExpanded').style.display = 'none';
+  document.getElementById('addCollapsed').style.display = 'flex';
+});
+
+(async function init(){
+  setSyncStatus('connecting…', false);
+  await loadRemoteData();
+  await loadBuiltins();
+  await loadCustom();
+  renderAll();
+})();
+</script>
+</body>
+</html>
