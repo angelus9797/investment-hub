@@ -333,9 +333,7 @@ function renderTicket(m, kind, idx){
     ? `<a class="btn" href="${escapeAttr(m.url)}" target="_blank" rel="noopener noreferrer">open →</a>`
     : `<span class="btn disabled">no link yet</span>`;
 
-  const removeBtn = kind === 'custom'
-    ? `<button class="btn danger ghost" data-remove="${idx}" title="remove">✕</button>`
-    : '';
+  const removeBtn = `<button class="btn danger ghost" data-remove="${kind}-${idx}" title="remove">✕</button>`;
 
   const editId = `${kind}-${idx}`;
 
@@ -403,9 +401,22 @@ function wireUpHandlers(){
   });
   document.querySelectorAll('[data-remove]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.getAttribute('data-remove'), 10);
-      customModules.splice(idx, 1);
-      await saveCustom();
+      const id = btn.getAttribute('data-remove');
+      const [kind, idxStr] = id.split('-');
+      const idx = parseInt(idxStr, 10);
+      const targetName = kind === 'builtin' ? builtinModules[idx].name : customModules[idx].name;
+      const confirmed = window.confirm(`Remove "${targetName}" from the hub?`);
+      if(!confirmed) return;
+      if(kind === 'builtin'){
+        const code = builtinModules[idx].code;
+        remoteData.builtinOverrides = remoteData.builtinOverrides || {};
+        remoteData.builtinOverrides[code] = Object.assign({}, remoteData.builtinOverrides[code] || {}, { removed: true });
+        await persistRemoteData();
+        await loadBuiltins();
+      } else {
+        customModules.splice(idx, 1);
+        await saveCustom();
+      }
       renderAll();
     });
   });
@@ -461,17 +472,21 @@ async function persistRemoteData(){
 
 async function loadBuiltins(){
   const overrides = remoteData.builtinOverrides || {};
-  builtinModules = defaultBuiltins.map(m => {
-    if(overrides[m.code] && typeof overrides[m.code].url === 'string'){
-      return Object.assign({}, m, { url: overrides[m.code].url });
-    }
-    return Object.assign({}, m);
-  });
+  builtinModules = defaultBuiltins
+    .filter(m => !(overrides[m.code] && overrides[m.code].removed))
+    .map(m => {
+      if(overrides[m.code] && typeof overrides[m.code].url === 'string'){
+        return Object.assign({}, m, { url: overrides[m.code].url });
+      }
+      return Object.assign({}, m);
+    });
 }
 
 async function saveBuiltinOverrides(){
-  const overrides = {};
-  builtinModules.forEach(m => { overrides[m.code] = { url: m.url }; });
+  const overrides = remoteData.builtinOverrides || {};
+  builtinModules.forEach(m => {
+    overrides[m.code] = Object.assign({}, overrides[m.code] || {}, { url: m.url });
+  });
   remoteData.builtinOverrides = overrides;
   await persistRemoteData();
 }
